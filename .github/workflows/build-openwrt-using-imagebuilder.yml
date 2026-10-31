@@ -332,6 +332,7 @@ on:
           - ophub
           - angel
           - yourname
+          - fansuregrin
 
 env:
   TZ: Etc/UTC
