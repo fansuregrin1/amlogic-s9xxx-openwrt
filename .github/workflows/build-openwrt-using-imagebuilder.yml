@@ -322,11 +322,11 @@ on:
       openwrt_ip:
         description: "Set OpenWrt default IP address."
         required: false
-        default: "192.168.1.1"
+        default: "192.168.3.3"
       builder_name:
         description: "Set OpenWrt builder signature."
         required: false
-        default: "ophub"
+        default: "fansuregrin"
         type: choice
         options:
           - ophub
@@ -446,11 +446,14 @@ jobs:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
           body: |
             ### OpenWrt Image Information
-            - Default IP: `192.168.1.1`
+            - Default IP: `${{ inputs.openwrt_ip }}`
             - Default username: `root`
             - Default password: `password`
             - Default WIFI name: `OpenWrt`
             - Default WIFI password: `none`
+            - Default theme: `argon`
+            - Builder: `${{ inputs.builder_name }}`
+            - Included: `luci-app-passwall2`, `luci-theme-argon`
             ### Install to EMMC
             - Login to OpenWrt → `System` → `Amlogic Service` → `Install OpenWrt`
             ### Applicable Platform

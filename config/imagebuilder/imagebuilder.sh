@@ -110,6 +110,42 @@ adjust_settings() {
     echo -e "${INFO} [ ${imagebuilder_path} ] directory contents: \n$(ls -lh . 2>/dev/null)"
 }
 
+# Add third-party package feeds (passwall2 / argon theme)
+add_third_party_feeds() {
+    cd ${imagebuilder_path}
+    echo -e "${STEPS} Adding third-party package feeds..."
+
+    [[ -f "repositories.conf" ]] || { echo -e "${WARNING} No repositories.conf found, skipped."; return 0; }
+
+    # Backup original repositories.conf
+    [[ -f "repositories.conf.orig" ]] || cp -f repositories.conf repositories.conf.orig
+
+    # Select feed branch according to the OpenWrt release branch.
+    # passwall2: packages-25.12 / packages-24.10 ; argon: immortalwrt release branch
+    case "${op_branch}" in
+        24.10*) pw_branch="packages-24.10"; iw_branch="24.10.6" ;;
+        *)      pw_branch="packages-25.12"; iw_branch="25.12.2" ;;
+    esac
+
+    # Remove previously appended block (idempotent)
+    sed -i '/# Third-party feeds: BEGIN/,/# Third-party feeds: END/d' repositories.conf
+
+    cat >> repositories.conf << EOF
+
+# Third-party feeds: BEGIN
+# passwall2 (${pw_branch})
+src/gz passwall2 https://master.dl.sourceforge.net/project/openwrt-passwall-build/releases/${pw_branch}/aarch64_generic/passwall2
+src/gz passwall_packages https://master.dl.sourceforge.net/project/openwrt-passwall-build/releases/${pw_branch}/aarch64_generic/passwall_packages
+src/gz passwall_luci https://master.dl.sourceforge.net/project/openwrt-passwall-build/releases/${pw_branch}/aarch64_generic/passwall_luci
+# argon theme (immortalwrt ${iw_branch})
+src/gz immortalwrt_luci https://downloads.immortalwrt.org/releases/${iw_branch}/packages/aarch64_generic/luci
+# Third-party feeds: END
+EOF
+
+    sync && sleep 2
+    echo -e "${INFO} [ repositories.conf ] contents: \n$(cat repositories.conf 2>/dev/null)"
+}
+
 # Add custom packages
 # If there is a custom package or ipk you would prefer to use create a [ packages ] directory,
 # If one does not exist and place your custom ipk within this directory.
@@ -306,6 +342,7 @@ echo -e "${INFO} Server disk usage before build: \n$(df -hT ${make_path}) \n"
 # Perform related operations
 download_imagebuilder
 adjust_settings
+add_third_party_feeds
 custom_packages
 custom_config
 custom_files
