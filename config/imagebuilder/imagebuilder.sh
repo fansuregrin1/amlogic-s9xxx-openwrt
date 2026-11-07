@@ -139,15 +139,20 @@ add_third_party_feeds() {
     # Remove previously appended block (idempotent)
     sed -i '/# Third-party feeds: BEGIN/,/# Third-party feeds: END/d' "${repo_file}"
 
+    # The apk-based ImageBuilder expects plain package index URLs (one per line),
+    # each pointing at the feed's packages.adb. The old opkg "src/gz <name> <url>"
+    # syntax is ignored (or breaks parsing) here.
+    local sf_base="https://downloads.sourceforge.net/project/openwrt-passwall-build/releases/${pw_branch}/aarch64_generic"
+
     cat >> "${repo_file}" << EOF
 
 # Third-party feeds: BEGIN
 # passwall2 (${pw_branch})
-src/gz passwall2 https://master.dl.sourceforge.net/project/openwrt-passwall-build/releases/${pw_branch}/aarch64_generic/passwall2
-src/gz passwall_packages https://master.dl.sourceforge.net/project/openwrt-passwall-build/releases/${pw_branch}/aarch64_generic/passwall_packages
-src/gz passwall_luci https://master.dl.sourceforge.net/project/openwrt-passwall-build/releases/${pw_branch}/aarch64_generic/passwall_luci
+${sf_base}/passwall2/packages.adb
+${sf_base}/passwall_packages/packages.adb
+${sf_base}/passwall_luci/packages.adb
 # argon theme (immortalwrt ${iw_branch})
-src/gz immortalwrt_luci https://downloads.immortalwrt.org/releases/${iw_branch}/packages/aarch64_generic/luci
+https://downloads.immortalwrt.org/releases/${iw_branch}/packages/aarch64_generic/luci/packages.adb
 # Third-party feeds: END
 EOF
 
