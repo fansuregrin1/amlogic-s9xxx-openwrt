@@ -101,6 +101,10 @@ adjust_settings() {
         sed -i "s|CONFIG_TARGET_ROOTFS_EXT4FS=.*|# CONFIG_TARGET_ROOTFS_EXT4FS is not set|g" .config
         sed -i "s|CONFIG_TARGET_ROOTFS_SQUASHFS=.*|# CONFIG_TARGET_ROOTFS_SQUASHFS is not set|g" .config
         sed -i "s|CONFIG_TARGET_IMAGES_GZIP=.*|# CONFIG_TARGET_IMAGES_GZIP is not set|g" .config
+        # Allow third-party feeds (passwall / immortalwrt) whose signing keys are
+        # not distributed. The Makefile adds --allow-untrusted only when this is
+        # unset: $(if $(CONFIG_SIGNATURE_CHECK),,--allow-untrusted)
+        sed -i "s|CONFIG_SIGNATURE_CHECK=.*|# CONFIG_SIGNATURE_CHECK is not set|g" .config
     else
         echo -e "${INFO} [ ${imagebuilder_path} ] directory contents: \n$(ls -lh . 2>/dev/null)"
         error_msg "No .config file found in [ ${download_file} ]."
@@ -128,6 +132,19 @@ add_third_party_feeds() {
 
     # Backup original repositories file
     [[ -f "${repo_file}.orig" ]] || cp -f "${repo_file}" "${repo_file}.orig"
+
+    # Trust the passwall repository signing key (APK_KEYS := $(TOPDIR)/keys).
+    # ImmortalWrt does not publish its key, hence CONFIG_SIGNATURE_CHECK is
+    # disabled in adjust_settings() as well.
+    mkdir -p keys
+    if [[ ! -f "keys/passwall.pub" ]]; then
+        curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors \
+            --connect-timeout 30 --max-time 120 \
+            -o "keys/passwall.pub" \
+            "https://downloads.sourceforge.net/project/openwrt-passwall-build/apk.pub" \
+            && echo -e "${INFO} passwall.pub installed." \
+            || echo -e "${WARNING} Failed to fetch passwall.pub, relying on --allow-untrusted."
+    fi
 
     # Select feed branch according to the OpenWrt release branch.
     # passwall2: packages-25.12 / packages-24.10 ; argon: immortalwrt release branch
