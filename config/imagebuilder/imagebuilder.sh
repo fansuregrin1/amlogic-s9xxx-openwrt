@@ -118,10 +118,16 @@ add_third_party_feeds() {
     cd ${imagebuilder_path}
     echo -e "${STEPS} Adding third-party package feeds..."
 
-    [[ -f "repositories.conf" ]] || { echo -e "${WARNING} No repositories.conf found, skipped."; return 0; }
+    # OpenWrt 25.12+ ImageBuilder uses "repositories"; older ones use "repositories.conf".
+    local repo_file=""
+    for f in repositories repositories.conf; do
+        [[ -f "${f}" ]] && { repo_file="${f}"; break; }
+    done
+    [[ -n "${repo_file}" ]] || { echo -e "${WARNING} No repositories file found, skipped."; return 0; }
+    echo -e "${INFO} Using repositories file: [ ${repo_file} ]"
 
-    # Backup original repositories.conf
-    [[ -f "repositories.conf.orig" ]] || cp -f repositories.conf repositories.conf.orig
+    # Backup original repositories file
+    [[ -f "${repo_file}.orig" ]] || cp -f "${repo_file}" "${repo_file}.orig"
 
     # Select feed branch according to the OpenWrt release branch.
     # passwall2: packages-25.12 / packages-24.10 ; argon: immortalwrt release branch
@@ -131,9 +137,9 @@ add_third_party_feeds() {
     esac
 
     # Remove previously appended block (idempotent)
-    sed -i '/# Third-party feeds: BEGIN/,/# Third-party feeds: END/d' repositories.conf
+    sed -i '/# Third-party feeds: BEGIN/,/# Third-party feeds: END/d' "${repo_file}"
 
-    cat >> repositories.conf << EOF
+    cat >> "${repo_file}" << EOF
 
 # Third-party feeds: BEGIN
 # passwall2 (${pw_branch})
@@ -146,7 +152,7 @@ src/gz immortalwrt_luci https://downloads.immortalwrt.org/releases/${iw_branch}/
 EOF
 
     sync && sleep 2
-    echo -e "${INFO} [ repositories.conf ] contents: \n$(cat repositories.conf 2>/dev/null)"
+    echo -e "${INFO} [ ${repo_file} ] contents: \n$(cat "${repo_file}" 2>/dev/null)"
 }
 
 # Add custom packages
