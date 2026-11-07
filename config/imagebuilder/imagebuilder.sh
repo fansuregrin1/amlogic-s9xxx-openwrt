@@ -74,7 +74,10 @@ download_imagebuilder() {
         download_url="downloads.openwrt.org"
     fi
     download_file="https://${download_url}/releases/${op_branch}/targets/armsr/armv8/${op_sourse}-imagebuilder-${op_branch}-armsr-armv8.Linux-x86_64.tar.zst"
-    curl -fsSOL ${download_file}
+    # Add timeout and retry to avoid hanging the whole workflow.
+    curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors \
+        --connect-timeout 30 --max-time 900 \
+        -o "$(basename "${download_file}")" "${download_file}"
     [[ "${?}" -eq "0" ]] || error_msg "Failed to download: [ ${download_file} ]"
 
     # Unzip and change the directory name
@@ -160,13 +163,13 @@ custom_packages() {
     # Download luci-app-amlogic
     amlogic_api="https://api.github.com/repos/ophub/luci-app-amlogic/releases"
     # Get the latest release version
-    amlogic_plugin_latest_version="$(curl -s ${amlogic_api} | grep -oP '(?<="tag_name": ")[^"]+' | grep "\-js$" | sort -Vur | head -n1)"
+    amlogic_plugin_latest_version="$(curl -s -m 60 --connect-timeout 15 ${amlogic_api} | grep -oP '(?<="tag_name": ")[^"]+' | grep "\-js$" | sort -Vur | head -n1)"
     # Get the download URLs for the latest release assets (ipk or apk files)
-    amlogic_plugin_list=($(curl -s ${amlogic_api} | grep "browser_download_url" | grep -oE "https.*/${amlogic_plugin_latest_version}/.*\.(ipk|apk)"))
+    amlogic_plugin_list=($(curl -s -m 60 --connect-timeout 15 ${amlogic_api} | grep "browser_download_url" | grep -oE "https.*/${amlogic_plugin_latest_version}/.*\.(ipk|apk)"))
 
     # Download the latest release assets
     for plugin_url in "${amlogic_plugin_list[@]}"; do
-        curl -fsSOJL "${plugin_url}"
+        curl -fsSOJL --retry 3 --retry-delay 5 --retry-all-errors --connect-timeout 30 --max-time 300 "${plugin_url}"
         [[ "${?}" -eq "0" ]] && echo -e "${INFO} The [ ${plugin_url} ] is downloaded successfully."
     done
 
